@@ -1,6 +1,11 @@
 # LLM - Large Language Model
 
-This should process queries from the user about the data 
+This should process queries from the user about the data
+
+## Setup
+Use [Poetry](https://python-poetry.org/docs/) to install all relevant packages. Run `poetry install`#
+
+[Download the Gemma model](https://huggingface.co/google/gemma-1.1-2b-it-GGUF) and put the path to it in .env
 
 ## Running without docker
 
