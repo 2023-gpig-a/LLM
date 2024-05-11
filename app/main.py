@@ -13,7 +13,17 @@ class Query(BaseModel):
     query: str
 
 
-app = FastAPI()
+app = FastAPI(
+    title="LLM",
+    summary="Sends queries from the frontend to a large language model.",
+    description="""This system interfaces with a Large Language Model using the LLaMA-CPP library.
+    Plant growth data is pulled from DMAS and sent to a model alongside a query entered into the corresponding frontend page.
+    This abstracts the workings of the LLM from the user and allows different models to be used to keep up with state-of-the-art.
+
+    An endpoint is provided for the frontend systems to call the LLM and obtain its output. This is:
+    -  `POST /query_llm`
+""",
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -27,11 +37,15 @@ app.add_middleware(
 )
 
 
-@app.get("/")
+@app.get("/", summary="Hello world sanity check.")
 async def hello_world():
     return {"response": "Hello World"}
 
 
-@app.post("/query_llm")
+@app.post(
+    "/query_llm",
+    summary="Send a query to the LLM and recieve a response from it.",
+    description="Intended for frontend usage.",
+)
 async def query_llm(query: Query):
-    return llm_response(query)
+    return llm_response(query.query)
