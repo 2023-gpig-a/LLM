@@ -9,7 +9,7 @@ import os
 
 dotenv.load_dotenv()  # this loads the environment variable for the model path
 
-llm_manager = LLM_Manager(demo=os.getenv("IS_DEMO"))
+llm_manager = LLM_Manager(demo=os.getenv("IS_DEMO").casefold() == "true")
 
 
 class Query(BaseModel):
