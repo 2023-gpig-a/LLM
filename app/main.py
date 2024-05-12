@@ -2,11 +2,14 @@ from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from model.main import llm_response
+from model.main import LLM_Manager
 
 import dotenv
+import os
 
 dotenv.load_dotenv()  # this loads the environment variable for the model path
+
+llm_manager = LLM_Manager(demo=os.getenv("IS_DEMO"))
 
 
 class Query(BaseModel):
@@ -48,4 +51,4 @@ async def hello_world():
     description="Intended for frontend usage.",
 )
 async def query_llm(query: Query):
-    return llm_response(query.query)
+    return llm_manager.llm_response(query.query)
