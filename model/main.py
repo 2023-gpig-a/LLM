@@ -57,14 +57,14 @@ class LLM:
             )
 
     def complete(self, context: str, query: str):
-        input = f"{context}\n Q: {query}\nA: "
+        input = f"{context}\nQ: {query}\nA: "
         if self.model_type == "llama":
             output = self.model(input, max_tokens=256, stop=["Q:", "\n"])
-            return {
-                "output": output["choices"][0]["text"],
-            }
+            return output["choices"][0]["text"]
         elif self.model_type == "langchain":
-            self.model.invoke(input, stop=["Q:", "\n"])
+            return self.model.invoke(input, stop=["Q:", "\n"])
+        else:
+            raise Exception(f'unexpected model type "{self.model_type}"')
 
 
 class DemoLLM:
@@ -163,6 +163,9 @@ class DemoLLM:
             # https://www.gov.uk/guidance/prevent-japanese-knotweed-from-spreading
             return "To stop the spread of knotweed, a glyphosate-based weedkiller can be applied several times. The plants could also be buried deep enough to prevent them from regrowing."
 
+        else:
+            return "I'm not quite sure what you're asking. Could you please rephrase your question?"
+
 
 class LLM_Manager:
     def __init__(self, demo: bool) -> None:
@@ -190,7 +193,7 @@ class LLM_Manager:
         """
         # query the dmas database to get the information regardless of real or fake
         dmas_endpoint = self.dmas_endpoint
-        context_data = requests.get(dmas_endpoint)  # this is a dict
+        context_data = requests.get(dmas_endpoint).json()  # this is a dict
 
         """Example growth pattern dictionary:
         {"Rose": "CONSTANT",
@@ -202,7 +205,7 @@ class LLM_Manager:
         if self.is_demo:
             self.llm_instance.update_context_data(context_data)
             response = self.llm_instance.demo(
-                context_data, query
+                query
             )  # easier to just use the dictionary for dummy function
         else:
             # process the context data into a context string
