@@ -11,9 +11,7 @@ Use [Poetry](https://python-poetry.org/docs/) to install all relevant packages. 
 ## Running without docker
 
 ```
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+poetry install
 uvicorn llm.app.main:app --reload
 ```
 
