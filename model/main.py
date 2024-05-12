@@ -4,24 +4,44 @@ import string
 import requests
 
 from llama_cpp import Llama
+from langchain_openai import OpenAI
+from langchain_community.llms.huggingface_pipeline import HuggingFacePipeline
 
 
 class LLM:
     def __init__(self) -> None:
-        self.llama = Llama(
-            model_path=os.getenv("LLM_MODEL_PATH"),
-            n_gpu_layers=-1,
-            # seed=1337,
-            n_ctx=2048,
-        )
+        model_source = os.getenv("MODEL_SOURCE").casefold()
+        api_token = os.getenv("API_TOKEN")
+        if model_source == "local":
+            self.model_type = "llama"
+            self.model = Llama(
+                model_path=os.getenv("LLM_MODEL_PATH"),
+                n_gpu_layers=-1,
+                # seed=1337,
+                n_ctx=2048,
+            )
+        elif model_source == "openai":
+            # there's no way I can actually test this, since I don't have an OpenAI access token, but in theory this should work
+            self.model_type = "langchain"
+            self.model = OpenAI(api_key=api_token)
+
+        elif model_source == "huggingface local":
+            self.model_type = "langchain"
+            self.model = HuggingFacePipeline.from_model_id(
+                model_id=os.getenv("HF_ID"),
+                task="text-generation",
+                pipeline_kwargs={"max_new_tokens": 256},
+            )
 
     def complete(self, context: str, query: str):
-        output = self.llama(
-            f"{context}\n Q: {query}\nA: ", max_tokens=256, stop=["Q:", "\n"]
-        )
-        return {
-            "output": output["choices"][0]["text"],
-        }
+        input = f"{context}\n Q: {query}\nA: "
+        if self.model_type == "llama":
+            output = self.model(input, max_tokens=256, stop=["Q:", "\n"])
+            return {
+                "output": output["choices"][0]["text"],
+            }
+        elif self.model_type == "langchain":
+            self.model.invoke(input, stop=["Q:", "\n"])
 
 
 class DemoLLM:
