@@ -6,6 +6,7 @@ import requests
 from llama_cpp import Llama
 from langchain_openai import OpenAI
 from langchain_community.llms.huggingface_pipeline import HuggingFacePipeline
+from langchain.llms import HuggingFaceEndpoint
 
 
 class LLM:
@@ -22,15 +23,37 @@ class LLM:
             )
         elif model_source == "openai":
             # there's no way I can actually test this, since I don't have an OpenAI access token, but in theory this should work
+            # https://python.langchain.com/v0.1/docs/integrations/llms/openai/
             self.model_type = "langchain"
             self.model = OpenAI(api_key=api_token)
 
         elif model_source == "huggingface local":
+            """
+            This downloads the LLM from HuggingFace Hub and runs inference locally on your device.
+            """
             self.model_type = "langchain"
             self.model = HuggingFacePipeline.from_model_id(
                 model_id=os.getenv("HF_ID"),
                 task="text-generation",
                 pipeline_kwargs={"max_new_tokens": 256},
+            )
+
+        elif model_source == "huggingface inference":
+            """
+            This lets you send requests to inference API endpoints on HuggingFace Hub, so you don't have to run the model locally.
+            """
+            # This has a bug in the newest version of langchain! downgraded to a recommended version which fixes the bug
+            # https://github.com/langchain-ai/langchain/issues/18321
+            # theoretically they should've fixed the bug by 2030... right...
+            # be wary that they change the names of the parameters around in different versions (e.g. you just pass in max_new_tokens instead of inside the kwargs dict)
+            self.model_type = "langchain"
+            self.model = HuggingFaceEndpoint(
+                endpoint_url=f"https://api-inference.huggingface.co/models/{os.getenv('HF_ID')}",
+                task="text-generation",
+                model_kwargs={
+                    "max_new_tokens": 250
+                },  # this is the max that inference models allow
+                huggingfacehub_api_token=api_token,
             )
 
     def complete(self, context: str, query: str):
