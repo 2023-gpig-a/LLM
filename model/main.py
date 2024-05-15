@@ -3,10 +3,11 @@ import string
 
 import requests
 
-from llama_cpp import Llama
 from langchain_openai import OpenAI
 from langchain_community.llms.huggingface_pipeline import HuggingFacePipeline
 from langchain.llms import HuggingFaceEndpoint
+from langchain_community.llms import LlamaCpp
+from langchain_core.callbacks import CallbackManager, StreamingStdOutCallbackHandler
 
 
 class LLM:
@@ -14,24 +15,26 @@ class LLM:
         model_source = os.getenv("MODEL_SOURCE").casefold()
         api_token = os.getenv("API_TOKEN")
         if model_source == "local":
-            self.model_type = "llama"
-            self.model = Llama(
+            callback_manager = CallbackManager([StreamingStdOutCallbackHandler()])
+            self.model = LlamaCpp(
                 model_path=os.getenv("LLM_MODEL_PATH"),
                 n_gpu_layers=-1,
                 # seed=1337,
                 n_ctx=2048,
+                n_batch=512,
+                callback_manager=callback_manager,
+                verbose=True,
+                max_tokens=256,
             )
         elif model_source == "openai":
             # there's no way I can actually test this, since I don't have an OpenAI access token, but in theory this should work
             # https://python.langchain.com/v0.1/docs/integrations/llms/openai/
-            self.model_type = "langchain"
             self.model = OpenAI(api_key=api_token)
 
         elif model_source == "huggingface local":
             """
             This downloads the LLM from HuggingFace Hub and runs inference locally on your device.
             """
-            self.model_type = "langchain"
             self.model = HuggingFacePipeline.from_model_id(
                 model_id=os.getenv("HF_ID"),
                 task="text-generation",
@@ -46,7 +49,6 @@ class LLM:
             # https://github.com/langchain-ai/langchain/issues/18321
             # theoretically they should've fixed the bug by 2030... right...
             # be wary that they change the names of the parameters around in different versions (e.g. you just pass in max_new_tokens instead of inside the kwargs dict)
-            self.model_type = "langchain"
             self.model = HuggingFaceEndpoint(
                 endpoint_url=f"https://api-inference.huggingface.co/models/{os.getenv('HF_ID')}",
                 task="text-generation",
@@ -58,13 +60,7 @@ class LLM:
 
     def complete(self, context: str, query: str):
         input = f"{context}\nQ: {query}\nA: "
-        if self.model_type == "llama":
-            output = self.model(input, max_tokens=256, stop=["Q:", "\n"])
-            return output["choices"][0]["text"]
-        elif self.model_type == "langchain":
-            return self.model.invoke(input, stop=["Q:", "\n"])
-        else:
-            raise Exception(f'unexpected model type "{self.model_type}"')
+        return self.model.invoke(input, stop=["Q:", "\n"])
 
 
 class DemoLLM:
