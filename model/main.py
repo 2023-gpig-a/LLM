@@ -1,5 +1,6 @@
 import os
 import string
+from time import sleep
 
 import requests
 
@@ -83,28 +84,31 @@ class DemoLLM:
         """
         context_data = self.context_data
         growth_patterns = {}
-        plantnames = context_data.keys()
-        for plants in [plantnames, plantnames[::-1]]:
+        plantnames = list(context_data.keys())
+        for plant in plantnames:
+            if plant not in context_data.keys():
+                return {}
+        for plants in [plantnames, list(plantnames)[::-1]]:
             if (
-                context_data[plants[1]] == "GROWING"
-                and context_data[plants[2]] == "DECAYING"
+                context_data[plants[0]] == "GROWING"
+                and context_data[plants[1]] == "DECAYING"
             ):
                 growth_patterns[
-                    plants[1]
+                    plants[0]
                 ] = "showing potential destructive exponential growth"
-                growth_patterns[plants[2]] = "decaying"
+                growth_patterns[plants[1]] = "decaying"
             elif (
-                context_data[plants[1]] == "GROWING"
-                and context_data[plants[2]] == "CONSTANT"
+                context_data[plants[0]] == "GROWING"
+                and context_data[plants[1]] == "CONSTANT"
             ):
                 growth_patterns[
-                    plants[1]
+                    plants[0]
                 ] = "showing non-destructive exponential growth"
-                growth_patterns[plants[2]] = "showing normal growth"
-            elif context_data[plants[1]] == "CONSTANT":
                 growth_patterns[plants[1]] = "showing normal growth"
-            elif context_data[plants[1]] == "DECAYING":
-                growth_patterns[plants[1]] = "decaying"
+            elif context_data[plants[0]] == "CONSTANT":
+                growth_patterns[plants[0]] = "showing normal growth"
+            elif context_data[plants[0]] == "DECAYING":
+                growth_patterns[plants[0]] = "decaying"
         return growth_patterns
 
     def demo(self, query: str):
@@ -125,7 +129,11 @@ class DemoLLM:
         )
 
         context_data = self.context_data
-        growthtypes = self.growthtypes
+        growthtypes = self.growthtypes()
+        print(context_data)
+        print(growthtypes)
+
+        sleep(0.5)
 
         if "growthpatterns" in query:  # q1
             response = ""
@@ -136,10 +144,12 @@ class DemoLLM:
             return response
 
         elif "growth" in query:  # q2 and 3
-            plant = "rose" if "rose" in query else "knotweed"
+            plant = ("rose" if "rose" in query else "knotweed").title()
+            if plant not in growthtypes:
+                return f"I don't have enough data to analyse the growth of {plant}."
             plant_growthtype = growthtypes[plant]
             if "destructive" in query:  # q2
-                if "potentially destructive" in plant_growthtype:
+                if "potential destructive" in plant_growthtype:
                     return f"The {plant} plant may potentially be showing destructive exponential growth."
                 else:
                     return f"The {plant} plant does not appear to be showing destructive exponential growth."
@@ -147,11 +157,13 @@ class DemoLLM:
                 return f"The {plant} plant appears to be {plant_growthtype}."
 
         elif "explanation" in query:  # q4
-            if "potentially destructive" in growthtypes.values():
+            if len([x for x in growthtypes.values() if 'potential destructive' in x]) > 0:
                 return "Another possible explanation for one plant to spread whilst others decay could be that an animal is eating other plants in the area."
-            elif "non-destructive" in growthtypes.values():
+            elif len([x for x in growthtypes.values() if 'non-destructive' in x]) > 0:
                 return "Another possible explanation for one plant to spread could be that a lot of this species has been planted recently."
-            # Surely we're not going to ask about explanations for normal growth, right? Not sure what to say for that, so leaving it for now.
+            # Surely we're not going to ask about explanations for normal growth, right? Not sure what to say for that
+            else:
+                return "The growth seems normal. Perhaps the plants are just growing as they should be?"
 
         elif "do" in query:  # q5
             # just going to write for the destructive case for now
